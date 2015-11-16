@@ -19,6 +19,7 @@ var runSequence  = require('run-sequence');
 var sass         = require('gulp-sass');
 var sourcemaps   = require('gulp-sourcemaps');
 var uglify       = require('gulp-uglify');
+var fileinclude  = require('gulp-file-include');
 
 // See https://github.com/austinpray/asset-builder
 var manifest = require('asset-builder')('./assets/manifest.json');
@@ -100,6 +101,9 @@ var cssTasks = function(filename) {
     .pipe(autoprefixer, {
       browsers: [
         'last 2 versions',
+        'ie 8',
+        'ie 9',
+        'android 2.3',
         'android 4',
         'opera 12'
       ]
@@ -209,6 +213,19 @@ gulp.task('fonts', function() {
     .pipe(browserSync.stream());
 });
 
+// ### src
+// `gulp src` - Grabs all the src files and outputs them in the dist directory
+gulp.task('src', function() {
+  return gulp.src('src/**.*')
+    .pipe(fileinclude({
+      prefix: '@@',
+      basepath: '@file'
+    }))
+    .pipe(flatten())
+    .pipe(gulp.dest(path.dist))
+    .pipe(browserSync.stream());
+});
+
 // ### Images
 // `gulp images` - Run lossless compression on all the images.
 gulp.task('images', function() {
@@ -245,12 +262,10 @@ gulp.task('clean', require('del').bind(null, [path.dist]));
 // See: http://www.browsersync.io
 gulp.task('watch', function() {
   browserSync.init({
-    files: ['{lib,templates}/**/*.php', '*.php'],
-    proxy: config.devUrl,
-    snippetOptions: {
-      whitelist: ['/wp-admin/admin-ajax.php'],
-      blacklist: ['/wp-admin/**']
-    }
+    server: {
+      baseDir: "./dist"
+    },
+    files: ['src/**/*']
   });
   gulp.watch([path.source + 'styles/**/*'], ['styles']);
   gulp.watch([path.source + 'scripts/**/*'], ['jshint', 'scripts']);
@@ -265,7 +280,7 @@ gulp.task('watch', function() {
 gulp.task('build', function(callback) {
   runSequence('styles',
               'scripts',
-              ['fonts', 'images'],
+              ['fonts', 'images', 'src'],
               callback);
 });
 
